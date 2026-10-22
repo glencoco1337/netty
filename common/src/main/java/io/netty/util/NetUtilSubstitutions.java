@@ -43,6 +43,10 @@ final class NetUtilSubstitutions {
     public static InetAddress LOCALHOST;
 
     @Alias
+    @InjectAccessors(NetUtilLoopbackIfAccessor.class)
+    public static NetworkInterface LOOPBACK_IF;
+
+    @Alias
     @InjectAccessors(NetUtilNetworkInterfacesAccessor.class)
     public static Collection<NetworkInterface> NETWORK_INTERFACES;
 
@@ -88,10 +92,27 @@ final class NetUtilSubstitutions {
     }
 
     private static final class NetUtilLocalhostLazyHolder {
-        private static final InetAddress LOCALHOST = NetUtilInitializations
-                .determineLoopback(NetUtilNetworkInterfacesLazyHolder.NETWORK_INTERFACES,
-                        NetUtilLocalhost4LazyHolder.LOCALHOST4, NetUtilLocalhost6LazyHolder.LOCALHOST6)
-                .address();
+        static {
+            NetUtilInitializations.NetworkIfaceAndInetAddress loopback = NetUtilInitializations.determineLoopback(
+                NetUtilNetworkInterfacesLazyHolder.NETWORK_INTERFACES, NetUtilLocalhost4LazyHolder.LOCALHOST4, NetUtilLocalhost6LazyHolder.LOCALHOST6);
+
+            LOCALHOST = loopback.address();
+	    LOOPBACK_IF = loopback.iface();
+	}
+
+        private static final InetAddress LOCALHOST;
+        private static final NetworkInterface LOOPBACK_IF;
+    }
+
+    private static final class NetUtilLoopbackIfAccessor {
+        static NetworkInterface get() {
+            // using https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom
+            return NetUtilLocalhostLazyHolder.LOOPBACK_IF;
+        }
+
+        static void set(NetworkInterface ignored) {
+            // a no-op setter to avoid exceptions when NetUtil is initialized at run-time
+        }
     }
 
     private static final class NetUtilNetworkInterfacesAccessor {
